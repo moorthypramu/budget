@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renovation Budget Auditor · Multi-User</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --bg: #f4f1ec;
+            --surface: #ffffff;
+            --surface-2: #fbf9f6;
+            --border: #e7e1d8;
+            --text: #2b2621;
+            --text-muted: #7a7168;
+            --primary: #8b5e3c;
+            --primary-dark: #6f4a2f;
+            --primary-light: #f3e8df;
+            --accent: #c9a227;
+            --success: #3f7d5a;
+            --success-bg: #e8f3ec;
+            --danger: #b03a2e;
+            --danger-bg: #fbeae8;
+            --warn-bg: #fff8e6;
+            --warn-border: #f0d98c;
+            --warn-text: #7a5a00;
+            --info-bg: #eef2f9;
+            --info-text: #3b5b8c;
+            --shadow-sm: 0 1px 2px rgba(43, 38, 33, 0.05);
+            --shadow-md: 0 8px 24px rgba(43, 38, 33, 0.07);
+            --shadow-lg: 0 20px 50px rgba(43, 38, 33, 0.12);
+            --radius: 16px;
+            --radius-lg: 24px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(201,162,39,0.08), transparent 42%),
+                radial-gradient(circle at 88% 0%, rgba(139,94,60,0.08), transparent 40%),
+                var(--bg);
+            font-family: 'Inter', system-ui, sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem 1.5rem 3rem;
+            -webkit-font-smoothing: antialiased;
+        }
+        .app-container { max-width: 1500px; margin: 0 auto; }
+        .hidden { display: none !important; }
+
+        #authScreen { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 5rem); }
+        .auth-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg); width: 100%; max-width: 440px; padding: 40px 38px 34px;
+            position: relative; overflow: hidden; animation: rise 0.5s ease;
+        }
+        .auth-card::before {
+            content: ''; position: absolute; inset: 0 0 auto 0; height: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+        }
+        @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .auth-brand { text-align: center; margin-bottom: 24px; }
+        .auth-brand .logo {
+            width: 60px; height: 60px; border-radius: 18px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.5rem; box-shadow: 0 10px 24px rgba(139,94,60,0.35); margin-bottom: 14px;
+        }
+        .auth-brand h2 { font-family: 'Playfair Display', serif; font-size: 1.45rem; color: var(--text); }
+        .auth-brand p { font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+
+        .auth-tabs {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+            background: var(--surface-2); border: 1px solid var(--border);
+            padding: 5px; border-radius: 14px; margin-bottom: 22px;
+        }
+        .auth-tab {
+            border: none; background: transparent; padding: 10px; border-radius: 10px;
+            font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text-muted);
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .auth-tab.active { background: var(--surface); color: var(--primary-dark); box-shadow: var(--shadow-sm); }
+        .role-switch {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+            background: var(--surface-2); border: 1px solid var(--border);
+            padding: 5px; border-radius: 14px; margin-bottom: 20px;
+        }
+        .role-btn {
+            border: none; background: transparent; padding: 9px; border-radius: 10px;
+            font-family: inherit; font-size: 0.86rem; font-weight: 600; color: var(--text-muted);
+            cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+        }
+        .role-btn.active { background: var(--surface); color: var(--primary-dark); box-shadow: var(--shadow-sm); }
+        .auth-field { margin-bottom: 15px; }
+        .auth-field label {
+            display: block; font-size: 0.76rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px;
+        }
+        .auth-field .input-wrap { position: relative; }
+        .auth-field .input-wrap i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 0.85rem;
+        }
+        .auth-field input {
+            width: 100%; padding: 12px 14px 12px 40px; border: 1px solid var(--border);
+            border-radius: 12px; font-family: inherit; font-size: 0.93rem;
+            background: var(--surface-2); color: var(--text); outline: none; transition: all 0.18s ease;
+        }
+        .auth-field input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 4px rgba(139,94,60,0.12); }
+        .auth-submit {
+            width: 100%; padding: 13px; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff; font-family: inherit; font-size: 0.96rem; font-weight: 600;
+            cursor: pointer; transition: transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 8px 20px rgba(139,94,60,0.28); margin-top: 6px;
+            display: flex; align-items: center; justify-content: center; gap: 9px;
+        }
+        .auth-submit:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(139,94,60,0.34); }
+        .auth-error {
+            background: var(--danger-bg); color: var(--danger); border: 1px solid #f2c9c4;
+            border-radius: 10px; padding: 10px 14px; font-size: 0.84rem; margin-bottom: 15px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .auth-hint {
+            text-align: center; font-size: 0.78rem; color: var(--text-muted);
+            margin-top: 18px; line-height: 1.6;
+        }
+        .auth-hint code { background: var(--primary-light); color: var(--primary-dark); padding: 1px 7px; border-radius: 6px; font-size: 0.74rem; }
+
+        #mainApp.visible { display: block; animation: rise 0.4s ease; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 1.4rem; }
+        h1 {
+            font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 700;
+            display: flex; align-items: center; gap: 14px; color: var(--text);
+        }
+        h1 .logo-badge {
+            width: 46px; height: 46px; border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.15rem; box-shadow: 0 6px 16px rgba(139,94,60,0.3);
+        }
+        .user-chip {
+            display: flex; align-items: center; gap: 12px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 40px; padding: 6px 6px 6px 16px;
+            box-shadow: var(--shadow-sm);
+        }
+        .user-chip .avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e0be4f);
+            color: #4a3a08; display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85rem;
+        }
+        .user-chip .meta { line-height: 1.2; }
+        .user-chip .meta .name { font-size: 0.87rem; font-weight: 600; }
+        .user-chip .meta .role { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .logout-btn {
+            border: none; background: var(--surface-2); border-radius: 40px; width: 38px; height: 38px;
+            display: inline-flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-muted); transition: all 0.18s ease; font-size: 0.95rem;
+        }
+        .logout-btn:hover { background: var(--danger-bg); color: var(--danger); }
+
+        .section-tabs {
+            display: flex; gap: 6px; background: var(--surface-2); border: 1px solid var(--border);
+            padding: 6px; border-radius: 16px; margin-bottom: 1.5rem; width: fit-content; flex-wrap: wrap;
+        }
+        .section-tab {
+            border: none; background: transparent; padding: 10px 22px; border-radius: 12px;
+            font-family: inherit; font-size: 0.92rem; font-weight: 600; color: var(--text-muted);
+            cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-tab.active { background: var(--surface); color: var(--primary-dark); box-shadow: var(--shadow-sm); }
+
+        .section-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 1.1rem; }
+        .section-title { font-size: 1.05rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; }
+        .section-title i { color: var(--primary); }
+        .action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 40px;
+            padding: 10px 20px; font-size: 0.89rem; font-weight: 600; font-family: inherit;
+            color: var(--text); display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+            transition: all 0.18s ease; box-shadow: var(--shadow-sm);
+        }
+        .btn:hover { background: var(--surface-2); border-color: #d8cfc2; transform: translateY(-1px); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-color: transparent; color: #fff; box-shadow: 0 6px 16px rgba(139,94,60,0.28);
+        }
+        .btn-primary:hover { box-shadow: 0 10px 22px rgba(139,94,60,0.36); background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+        .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+        .btn-outline { background: transparent; }
+
+        .view-note {
+            padding: 12px 18px; border-radius: 14px; font-size: 0.86rem; margin-bottom: 14px;
+            display: flex; align-items: center; gap: 10px; border: 1px solid; line-height: 1.4;
+        }
+        .view-note.read-only { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+        .view-note i { font-size: 0.95rem; }
+
+        .toolbar {
+            display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+            margin-bottom: 1.25rem; background: var(--surface); padding: 16px 20px;
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-md); border: 1px solid var(--border);
+        }
+        .filter-group {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            background: var(--surface-2); padding: 6px 16px 6px 12px;
+            border-radius: 40px; border: 1px solid var(--border);
+        }
+        .filter-group.admin-view { background: var(--primary-light); border-color: #e0cdb9; }
+        .filter-group label { font-size: 0.84rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+        .filter-group select, .filter-group input {
+            border: none; background: transparent; padding: 8px 4px; font-family: inherit;
+            font-size: 0.87rem; border-radius: 8px; outline: none; color: var(--text);
+            font-weight: 500; min-width: 100px;
+        }
+        .filter-group select { cursor: pointer; }
+        .filter-group input { width: 118px; }
+        .filter-group input::placeholder { color: #a89f94; font-weight: 400; }
+        .filter-group input[type="date"] { width: 132px; }
+        .filter-group input[type="number"] { width: 88px; }
+        .filter-divider { width: 1px; height: 26px; background: var(--border); margin: 0 4px; }
+
+        .table-wrapper {
+            background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border);
+            overflow: auto; box-shadow: var(--shadow-md); margin-bottom: 1.5rem;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.91rem; min-width: 1100px; }
+        th {
+            text-align: left; padding: 16px; background: var(--surface-2); font-weight: 600;
+            color: var(--text-muted); border-bottom: 1px solid var(--border); font-size: 0.72rem;
+            letter-spacing: 0.7px; text-transform: uppercase; white-space: nowrap;
+        }
+        td { padding: 14px 16px; border-bottom: 1px solid #f1ece5; color: var(--text); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tbody tr { transition: background 0.15s ease; }
+        tbody tr:hover { background: #fdfbf8; }
+        .user-col { display: none; }
+        table.show-user-col .user-col { display: table-cell; }
+        .badge {
+            background: var(--primary-light); color: var(--primary-dark); padding: 4px 11px;
+            border-radius: 40px; font-size: 0.74rem; font-weight: 600; display: inline-block; white-space: nowrap;
+        }
+        .badge.serial { background: #eee8df; color: #6f4a2f; min-width: 40px; text-align: center; }
+        .badge.user-badge { background: var(--info-bg); color: var(--info-text); }
+        .badge.type-budget { background: var(--success-bg); color: var(--success); }
+        .badge.type-expense { background: var(--danger-bg); color: var(--danger); }
+        .badge.activity-type { background: #eae4f4; color: #5b4391; }
+        .badge.labour-badge { background: #eef7f0; color: #2f6b47; }
+        .amount { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .amount.positive { color: var(--success); }
+        .amount.negative { color: var(--danger); }
+        .num-strong { font-weight: 700; font-variant-numeric: tabular-nums; }
+        .row-actions { display: flex; gap: 6px; }
+        .read-only-dash { color: var(--text-muted); font-size: 0.85rem; }
+        .icon-btn {
+            background: transparent; border: none; font-size: 0.9rem; color: var(--text-muted);
+            cursor: pointer; padding: 6px; border-radius: 8px; transition: all 0.15s ease;
+            width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+        .icon-btn.delete:hover { background: var(--danger-bg); color: var(--danger); }
+        .empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); font-size: 0.94rem; }
+        .empty-state i { font-size: 2rem; margin-bottom: 12px; display: block; color: #c9bfb2; }
+
+        .summary-bar {
+            display: flex; justify-content: flex-end; gap: 36px; padding: 18px 26px;
+            background: linear-gradient(135deg, var(--surface), var(--surface-2));
+            border-radius: var(--radius-lg); border: 1px solid var(--border); margin-bottom: 2rem;
+            font-size: 0.94rem; font-weight: 500; flex-wrap: wrap; box-shadow: var(--shadow-sm);
+        }
+        .summary-item span:first-child { color: var(--text-muted); font-weight: 500; margin-right: 10px; font-size: 0.84rem; }
+        .summary-item span:last-child { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+
+        .add-form {
+            display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+            background: var(--surface); padding: 20px 24px; border-radius: var(--radius-lg);
+            border: 1px solid var(--border); margin-bottom: 22px; box-shadow: var(--shadow-sm);
+        }
+        .form-field { display: flex; flex-direction: column; gap: 6px; min-width: 130px; flex: 1 1 140px; }
+        .form-field label {
+            font-size: 0.71rem; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .form-field input, .form-field select {
+            padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+            font-family: inherit; font-size: 0.91rem; background: var(--surface-2);
+            color: var(--text); outline: none; transition: all 0.15s ease;
+        }
+        .form-field input:focus, .form-field select:focus {
+            border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px rgba(139,94,60,0.12);
+        }
+        .form-field input[type="number"] { -moz-appearance: textfield; }
+        .form-actions { display: flex; gap: 12px; align-items: center; }
+
+        @media (max-width: 640px) {
+            body { padding: 1.25rem 0.9rem 2rem; }
+            h1 { font-size: 1.5rem; }
+            .auth-card { padding: 30px 22px 26px; }
+            .summary-bar { justify-content: space-between; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="authScreen">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <div class="logo"><i class="fas fa-hammer"></i></div>
+            <h2>Renovation Budget Auditor</h2>
+            <p>Track, audit & export renovation finances</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Login</button>
+            <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <div id="loginPanel">
+            <div class="role-switch">
+                <button type="button" class="role-btn active" data-role="user"><i class="fas fa-user"></i> User</button>
+                <button type="button" class="role-btn" data-role="admin"><i class="fas fa-user-shield"></i> Admin</button>
+            </div>
+            <div class="auth-error hidden" id="loginError"><i class="fas fa-circle-exclamation"></i> <span id="loginErrorText"></span></div>
+            <form id="loginForm" autocomplete="off">
+                <div class="auth-field">
+                    <label id="loginUsernameLabel">Username</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="loginUsername" placeholder="Enter username" required>
+                    </div>
+                </div>
+                <div class="auth-field">
+                    <label>Password</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="loginPassword" placeholder="Enter password" required>
+                    </div>
+                </div>
+                <button type="submit" class="auth-submit" id="loginSubmitBtn"><i class="fas fa-arrow-right-to-bracket"></i> Sign In</button>
+            </form>
+            <div class="auth-hint" id="loginHint">
+                Demo user: <code>user</code> / <code>user123</code> · or create your own account above
+            </div>
+        </div>
+
+        <div id="signupPanel" class="hidden">
+            <div class="auth-error hidden" id="signupError"><i class="fas fa-circle-exclamation"></i> <span id="signupErrorText"></span></div>
+            <form id="signupForm" autocomplete="off">
+                <div class="auth-field">
+                    <label>Full Name</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-id-card"></i>
+                        <input type="text" id="signupName" placeholder="e.g. Priya Sharma" required maxlength="60">
+                    </div>
+                </div>
+                <div class="auth-field">
+                    <label>Username</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-at"></i>
+                        <input type="text" id="signupUsername" placeholder="Choose a username" required maxlength="30">
+                    </div>
+                </div>
+                <div class="auth-field">
+                    <label>Password</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="signupPassword" placeholder="Min. 4 characters" required minlength="4">
+                    </div>
+                </div>
+                <div class="auth-field">
+                    <label>Confirm Password</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="signupConfirm" placeholder="Re-enter password" required minlength="4">
+                    </div>
+                </div>
+                <button type="submit" class="auth-submit" id="signupSubmitBtn"><i class="fas fa-user-plus"></i> Create Account</button>
+            </form>
+            <div class="auth-hint">
+                New users manage only their own budget entries.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp" class="app-container hidden">
+    <div class="topbar">
+        <h1><span class="logo-badge"><i class="fas fa-hammer"></i></span> Renovation Budget Auditor</h1>
+        <div class="user-chip">
+            <span class="avatar" id="userAvatar">U</span>
+            <div class="meta">
+                <div class="name" id="userName">User</div>
+                <div class="role" id="userRole">User</div>
+            </div>
+            <button class="logout-btn" id="logoutBtn" title="Logout"><i class="fas fa-right-from-bracket"></i></button>
+        </div>
+    </div>
+
+    <div class="section-tabs">
+        <button class="section-tab active" data-section="budget"><i class="fas fa-file-invoice-dollar"></i> Budget Records</button>
+        <button class="section-tab hidden" id="activityTabBtn" data-section="activity"><i class="fas fa-hard-hat"></i> Daily Activity Log</button>
+    </div>
+
+    <div id="budgetSection">
+        <div class="section-head">
+            <div class="section-title"><i class="fas fa-file-invoice-dollar"></i> Budget Records</div>
+            <div class="action-row">
+                <button class="btn" id="exportCsvBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+                <button class="btn" id="exportJsonBtn"><i class="fas fa-download"></i> Export JSON</button>
+                <button class="btn" id="importJsonBtn"><i class="fas fa-upload"></i> Import JSON</button>
+                <button class="btn btn-primary" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            </div>
+        </div>
+
+        <div class="add-form" id="addForm">
+            <div class="form-field">
+                <label>Category</label>
+                <select id="inputCategory">
+                    <option value="Materials">Materials</option>
+                    <option value="Labor">Labor</option>
+                    <option value="Fixtures">Fixtures</option>
+                    <option value="Permits">Permits</option>
+                    <option value="Design">Design</option>
+                    <option value="Contingency">Contingency</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Description</label>
+                <input type="text" id="inputDesc" placeholder="e.g. Kitchen tiles" maxlength="80">
+            </div>
+            <div class="form-field">
+                <label>Paid To</label>
+                <input type="text" id="inputPaidTo" placeholder="e.g. Rajesh Traders" maxlength="60">
+            </div>
+            <div class="form-field">
+                <label>Amount</label>
+                <input type="number" id="inputAmount" placeholder="0.00" step="0.01" min="0">
+            </div>
+            <div class="form-field">
+                <label>Type</label>
+                <select id="inputType">
+                    <option value="expense">Expense</option>
+                    <option value="budget">Budget</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Date</label>
+                <input type="date" id="inputDate">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" id="addRecordBtn"><i class="fas fa-plus"></i> Add record</button>
+            </div>
+        </div>
+
+        <div class="view-note read-only hidden" id="viewNote"></div>
+
+        <div class="toolbar">
+            <div class="filter-group admin-view hidden" id="adminViewGroup">
+                <label><i class="fas fa-users-viewfinder"></i> Viewing:</label>
+                <select id="adminViewUser"></select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-filter"></i> Filters:</label>
+                <select id="filterCategory">
+                    <option value="all">All categories</option>
+                    <option value="Materials">Materials</option>
+                    <option value="Labor">Labor</option>
+                    <option value="Fixtures">Fixtures</option>
+                    <option value="Permits">Permits</option>
+                    <option value="Design">Design</option>
+                    <option value="Contingency">Contingency</option>
+                    <option value="Other">Other</option>
+                </select>
+                <select id="filterType">
+                    <option value="all">All types</option>
+                    <option value="expense">Expense</option>
+                    <option value="budget">Budget</option>
+                </select>
+                <div class="filter-divider"></div>
+                <input type="text" id="filterSearch" placeholder="Search description...">
+                <input type="text" id="filterPaidTo" placeholder="Paid to...">
+                <div class="filter-divider"></div>
+                <label style="font-size:0.76rem;">From</label>
+                <input type="date" id="filterDateFrom" title="From date">
+                <label style="font-size:0.76rem;">To</label>
+                <input type="date" id="filterDateTo" title="To date">
+                <div class="filter-divider"></div>
+                <label style="font-size:0.76rem;">Min ₹</label>
+                <input type="number" id="filterMinAmount" placeholder="0" min="0" step="0.01">
+                <label style="font-size:0.76rem;">Max ₹</label>
+                <input type="number" id="filterMaxAmount" placeholder="∞" min="0" step="0.01">
+                <button class="btn btn-sm btn-outline" id="clearFiltersBtn" style="border: none;"><i class="fas fa-times"></i> Clear</button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th class="user-col">User</th>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Paid To</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            <div class="empty-state" id="emptyState">
+                <i class="fas fa-clipboard-list"></i>
+                No records match the current filters.
+            </div>
+        </div>
+
+        <div class="summary-bar">
+            <div class="summary-item"><span>Total Budget</span> <span id="totalBudget">0.00</span></div>
+            <div class="summary-item"><span>Total Expenses</span> <span id="totalExpense">0.00</span></div>
+            <div class="summary-item"><span>Remaining</span> <span id="remainingAmount">0.00</span></div>
+            <div class="summary-item"><span>Filtered Records</span> <span id="filteredCount">0</span></div>
+        </div>
+    </div>
+
+    <div id="activitySection" class="hidden">
+        <div class="section-head">
+            <div class="section-title"><i class="fas fa-hard-hat"></i> Daily Activity Log</div>
+            <div class="action-row">
+                <button class="btn" id="exportActivityCsvBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+                <button class="btn" id="exportActivityJsonBtn"><i class="fas fa-download"></i> Export JSON</button>
+                <button class="btn" id="importActivityJsonBtn"><i class="fas fa-upload"></i> Import JSON</button>
+                <button class="btn btn-primary" id="exportActivityPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            </div>
+        </div>
+
+        <div class="add-form" id="activityAddForm">
+            <div class="form-field">
+                <label>Date</label>
+                <input type="date" id="actInputDate">
+            </div>
+            <div class="form-field">
+                <label>Activity Type</label>
+                <select id="actInputType">
+                    <option value="Masonry">Masonry</option>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Painting">Painting</option>
+                    <option value="Carpentry">Carpentry</option>
+                    <option value="Flooring / Tiling">Flooring / Tiling</option>
+                    <option value="Roofing">Roofing</option>
+                    <option value="Demolition">Demolition</option>
+                    <option value="Site Prep">Site Prep</option>
+                    <option value="Concrete">Concrete</option>
+                    <option value="Waterproofing">Waterproofing</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-field" style="flex: 0 1 120px;">
+                <label>Labours</label>
+                <input type="number" id="actInputLabour" placeholder="0" step="1" min="0">
+            </div>
+            <div class="form-field" style="flex: 0 1 120px;">
+                <label>Hours / Labour</label>
+                <input type="number" id="actInputHours" placeholder="8" step="0.5" min="0">
+            </div>
+            <div class="form-field">
+                <label>Supervisor</label>
+                <input type="text" id="actInputSupervisor" placeholder="e.g. Ramesh" maxlength="60">
+            </div>
+            <div class="form-field" style="flex: 2 1 220px;">
+                <label>Notes</label>
+                <input type="text" id="actInputNotes" placeholder="Any remarks about today's work" maxlength="120">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" id="addActivityBtn"><i class="fas fa-plus"></i> Log activity</button>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="filter-group">
+                <label><i class="fas fa-filter"></i> Filters:</label>
+                <select id="filterActivityType">
+                    <option value="all">All activity types</option>
+                    <option value="Masonry">Masonry</option>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Painting">Painting</option>
+                    <option value="Carpentry">Carpentry</option>
+                    <option value="Flooring / Tiling">Flooring / Tiling</option>
+                    <option value="Roofing">Roofing</option>
+                    <option value="Demolition">Demolition</option>
+                    <option value="Site Prep">Site Prep</option>
+                    <option value="Concrete">Concrete</option>
+                    <option value="Waterproofing">Waterproofing</option>
+                    <option value="Other">Other</option>
+                </select>
+                <div class="filter-divider"></div>
+                <input type="text" id="filterActivitySearch" placeholder="Search supervisor / notes...">
+                <div class="filter-divider"></div>
+                <label style="font-size:0.76rem;">From</label>
+                <input type="date" id="filterActivityDateFrom" title="From date">
+                <label style="font-size:0.76rem;">To</label>
+                <input type="date" id="filterActivityDateTo" title="To date">
+                <div class="filter-divider"></div>
+                <label style="font-size:0.76rem;">Min Labours</label>
+                <input type="number" id="filterActivityLabourMin" placeholder="0" min="0" step="1">
+                <label style="font-size:0.76rem;">Max Labours</label>
+                <input type="number" id="filterActivityLabourMax" placeholder="∞" min="0" step="1">
+                <button class="btn btn-sm btn-outline" id="clearActivityFiltersBtn" style="border: none;"><i class="fas fa-times"></i> Clear</button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="activityTable">
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Date</th>
+                        <th>Activity Type</th>
+                        <th>Labours</th>
+                        <th>Hours / Labour</th>
+                        <th>Total Man-Hours</th>
+                        <th>Supervisor</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activityTableBody"></tbody>
+            </table>
+            <div class="empty-state" id="activityEmptyState">
+                <i class="fas fa-hard-hat"></i>
+                No activity entries match the current filters.
+            </div>
+        </div>
+
+        <div class="summary-bar">
+            <div class="summary-item"><span>Entries</span> <span id="actTotalEntries">0</span></div>
+            <div class="summary-item"><span>Total Labour-Days</span> <span id="actTotalLabour">0</span></div>
+            <div class="summary-item"><span>Total Man-Hours</span> <span id="actTotalManHours">0</span></div>
+            <div class="summary-item"><span>Avg Labours / Entry</span> <span id="actAvgLabour">0</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ============ CONSTANTS ============
+        const STORAGE_USERS = 'rb_users_v3';
+        const STORAGE_RECORDS = 'rb_records_v3';
+        const STORAGE_NEXT_ID = 'rb_nextId_v3';
+        const STORAGE_SESSION = 'rb_session_v3';
+        const STORAGE_ACTIVITIES = 'rb_activities_v4';
+        const STORAGE_NEXT_ACT_ID = 'rb_nextActivityId_v4';
+
+        const ADMIN_USERNAME = 'illam';
+        const ADMIN_OWNER = '__admin__';
+        const VIEW_ALL = '__all__';
+        const RESERVED_USERNAMES = ['illam', 'admin', '__admin__', '__all__'];
+
+        // ============ STATE ============
+        let users = [];
+        let records = [];
+        let nextId = 1;
+        let activities = [];
+        let nextActivityId = 1;
+        let currentUser = null;
+        let currentViewOwner = null;
+        let authTab = 'login';
+        let authRole = 'user';
+        let activeSection = 'budget';
+
+        // ============ DOM ============
+        const $ = id => document.getElementById(id);
+        const authScreen = $('authScreen');
+        const mainApp = $('mainApp');
+        const loginPanel = $('loginPanel');
+        const signupPanel = $('signupPanel');
+        const loginForm = $('loginForm');
+        const signupForm = $('signupForm');
+        const loginError = $('loginError');
+        const signupError = $('signupError');
+        const loginUsername = $('loginUsername');
+        const loginPassword = $('loginPassword');
+        const signupName = $('signupName');
+        const signupUsername = $('signupUsername');
+        const signupPassword = $('signupPassword');
+        const signupConfirm = $('signupConfirm');
+
+        const userNameEl = $('userName');
+        const userRoleEl = $('userRole');
+        const userAvatarEl = $('userAvatar');
+        const logoutBtn = $('logoutBtn');
+
+        const budgetSection = $('budgetSection');
+        const activitySection = $('activitySection');
+        const activityTabBtn = $('activityTabBtn');
+
+        const adminViewGroup = $('adminViewGroup');
+        const adminViewUser = $('adminViewUser');
+        const addForm = $('addForm');
+        const viewNote = $('viewNote');
+        const importJsonBtn = $('importJsonBtn');
+
+        const tbody = $('tableBody');
+        const emptyState = $('emptyState');
+        const recordsTable = $('recordsTable');
+        const totalBudgetEl = $('totalBudget');
+        const totalExpenseEl = $('totalExpense');
+        const remainingEl = $('remainingAmount');
+        const filteredCountEl = $('filteredCount');
+
+        const filterCategory = $('filterCategory');
+        const filterType = $('filterType');
+        const filterSearch = $('filterSearch');
+        const filterPaidTo = $('filterPaidTo');
+        const filterDateFrom = $('filterDateFrom');
+        const filterDateTo = $('filterDateTo');
+        const filterMinAmount = $('filterMinAmount');
+        const filterMaxAmount = $('filterMaxAmount');
+        const clearFiltersBtn = $('clearFiltersBtn');
+
+        const inputCategory = $('inputCategory');
+        const inputDesc = $('inputDesc');
+        const inputPaidTo = $('inputPaidTo');
+        const inputAmount = $('inputAmount');
+        const inputType = $('inputType');
+        const inputDate = $('inputDate');
+        const addRecordBtn = $('addRecordBtn');
+
+        const exportCsvBtn = $('exportCsvBtn');
+        const exportJsonBtn = $('exportJsonBtn');
+        const exportPdfBtn = $('exportPdfBtn');
+
+        const actInputDate = $('actInputDate');
+        const actInputType = $('actInputType');
+        const actInputLabour = $('actInputLabour');
+        const actInputHours = $('actInputHours');
+        const actInputSupervisor = $('actInputSupervisor');
+        const actInputNotes = $('actInputNotes');
+        const addActivityBtn = $('addActivityBtn');
+        const activityTableBody = $('activityTableBody');
+        const activityEmptyState = $('activityEmptyState');
+        const activityTable = $('activityTable');
+        const actTotalEntries = $('actTotalEntries');
+        const actTotalLabour = $('actTotalLabour');
+        const actTotalManHours = $('actTotalManHours');
+        const actAvgLabour = $('actAvgLabour');
+
+        const filterActivityType = $('filterActivityType');
+        const filterActivitySearch = $('filterActivitySearch');
+        const filterActivityDateFrom = $('filterActivityDateFrom');
+        const filterActivityDateTo = $('filterActivityDateTo');
+        const filterActivityLabourMin = $('filterActivityLabourMin');
+        const filterActivityLabourMax = $('filterActivityLabourMax');
+        const clearActivityFiltersBtn = $('clearActivityFiltersBtn');
+
+        const exportActivityCsvBtn = $('exportActivityCsvBtn');
+        const exportActivityJsonBtn = $('exportActivityJsonBtn');
+        const importActivityJsonBtn = $('importActivityJsonBtn');
+        const exportActivityPdfBtn = $('exportActivityPdfBtn');
+
+        // ============ STORAGE ============
+        function loadState() {
+            try {
+                users = JSON.parse(localStorage.getItem(STORAGE_USERS) || '[]');
+                records = JSON.parse(localStorage.getItem(STORAGE_RECORDS) || '[]');
+                nextId = parseInt(localStorage.getItem(STORAGE_NEXT_ID) || '1', 10) || 1;
+                activities = JSON.parse(localStorage.getItem(STORAGE_ACTIVITIES) || '[]');
+                nextActivityId = parseInt(localStorage.getItem(STORAGE_NEXT_ACT_ID) || '1', 10) || 1;
+                currentUser = JSON.parse(localStorage.getItem(STORAGE_SESSION) || 'null');
+            } catch (e) {
+                users = []; records = []; nextId = 1; activities = []; nextActivityId = 1; currentUser = null;
+            }
+            if (!Array.isArray(users)) users = [];
+            if (!Array.isArray(records)) records = [];
+            if (!Array.isArray(activities)) activities = [];
+
+            if (currentUser) {
+                if (currentUser.role === 'admin') {
+                    if (currentUser.username !== ADMIN_USERNAME) currentUser = null;
+                } else {
+                    const found = users.find(u => u.username === currentUser.username);
+                    if (!found) currentUser = null;
+                }
+            }
+            if (currentUser) {
+                currentViewOwner = currentUser.role === 'admin' ? ADMIN_OWNER : currentUser.username;
+            }
+        }
+        function saveState() {
+            localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+            localStorage.setItem(STORAGE_RECORDS, JSON.stringify(records));
+            localStorage.setItem(STORAGE_NEXT_ID, String(nextId));
+            localStorage.setItem(STORAGE_ACTIVITIES, JSON.stringify(activities));
+            localStorage.setItem(STORAGE_NEXT_ACT_ID, String(nextActivityId));
+            localStorage.setItem(STORAGE_SESSION, JSON.stringify(currentUser));
+        }
+
+        // ============ HELPERS ============
+        function hashPassword(pw) {
+            let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+            for (let i = 0; i < pw.length; i++) {
+                const ch = pw.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+        }
+        function getOwnerId(user) { return user.role === 'admin' ? ADMIN_OWNER : user.username; }
+        function getUserDisplayName(owner) {
+            if (owner === ADMIN_OWNER) return 'Admin';
+            const u = users.find(x => x.username === owner);
+            return u ? u.name : owner;
+        }
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(num);
+        }
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+        function todayISO() { return new Date().toISOString().split('T')[0]; }
+        function numOrZero(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+        // ============ ROBUST FILE HANDLING ============
+        // Fresh hidden input every time — most reliable across browsers.
+        function pickJSONFile(onFile) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json,.json';
+            input.style.display = 'none';
+            let handled = false;
+            input.addEventListener('change', () => {
+                if (handled) return;
+                handled = true;
+                const file = input.files && input.files[0];
+                if (file) onFile(file);
+                setTimeout(() => { if (input.parentNode) input.parentNode.removeChild(input); }, 1500);
+            });
+            document.body.appendChild(input);
+            input.click();
+        }
+
+        function readJSONFile(file, onSuccess, onError) {
+            const reader = new FileReader();
+            reader.onerror = () => onError(new Error('Could not read the file.'));
+            reader.onload = (e) => {
+                try {
+                    let text = String(e.target.result || '');
+                    // Strip UTF-8 BOM if present (common when edited in Notepad)
+                    text = text.replace(/^\uFEFF/, '');
+                    if (!text.trim()) throw new Error('The file is empty.');
+                    let data = JSON.parse(text);
+                    // Handle double-encoded JSON (string inside a string)
+                    if (typeof data === 'string') data = JSON.parse(data);
+                    onSuccess(data);
+                } catch (err) {
+                    onError(err);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 1000);
+        }
+
+        // ============ AUTH UI ============
+        function showAuthError(which, msg) {
+            const el = which === 'login' ? loginError : signupError;
+            const txt = which === 'login' ? $('loginErrorText') : $('signupErrorText');
+            txt.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function hideAuthError(which) {
+            (which === 'login' ? loginError : signupError).classList.add('hidden');
+        }
+
+        document.querySelectorAll('.auth-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                authTab = btn.dataset.tab;
+                document.querySelectorAll('.auth-tab').forEach(b => b.classList.toggle('active', b === btn));
+                loginPanel.classList.toggle('hidden', authTab !== 'login');
+                signupPanel.classList.toggle('hidden', authTab !== 'signup');
+                hideAuthError('login'); hideAuthError('signup');
+            });
+        });
+
+        document.querySelectorAll('.role-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                authRole = btn.dataset.role;
+                document.querySelectorAll('.role-btn').forEach(b => b.classList.toggle('active', b === btn));
+                $('loginUsernameLabel').textContent = authRole === 'admin' ? 'Admin Username' : 'Username';
+                $('loginHint').innerHTML = authRole === 'admin'
+                    ? '<strong>Admin login:</strong> username <code>illam</code> · password is your 10-digit mobile number'
+                    : 'Demo user: <code>user</code> / <code>user123</code> · or create your own account above';
+                hideAuthError('login');
+            });
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideAuthError('login');
+            const username = loginUsername.value.trim();
+            const password = loginPassword.value;
+            if (authRole === 'admin') {
+                if (username !== ADMIN_USERNAME) { showAuthError('login', 'Invalid admin username. Use "illam".'); return; }
+                if (!/^\d{10}$/.test(password)) { showAuthError('login', 'Admin password must be exactly a 10-digit mobile number.'); return; }
+                currentUser = { username: ADMIN_USERNAME, name: 'Admin', role: 'admin' };
+            } else {
+                const u = users.find(x => x.username === username);
+                if (!u) { showAuthError('login', 'No account found with that username.'); return; }
+                if (u.passwordHash !== hashPassword(password)) { showAuthError('login', 'Incorrect password.'); return; }
+                currentUser = { username: u.username, name: u.name, role: 'user' };
+            }
+            currentViewOwner = getOwnerId(currentUser);
+            saveState();
+            enterApp();
+        });
+
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideAuthError('signup');
+            const name = signupName.value.trim();
+            const username = signupUsername.value.trim();
+            const pw = signupPassword.value;
+            const confirm = signupConfirm.value;
+            if (!name) { showAuthError('signup', 'Please enter your full name.'); return; }
+            if (username.length < 3) { showAuthError('signup', 'Username must be at least 3 characters.'); return; }
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) { showAuthError('signup', 'Username may only contain letters, numbers and underscores.'); return; }
+            if (RESERVED_USERNAMES.includes(username.toLowerCase())) { showAuthError('signup', 'That username is not available.'); return; }
+            if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showAuthError('signup', 'Username already taken.'); return; }
+            if (pw.length < 4) { showAuthError('signup', 'Password must be at least 4 characters.'); return; }
+            if (pw !== confirm) { showAuthError('signup', 'Passwords do not match.'); return; }
+            users.push({ username, name, passwordHash: hashPassword(pw), createdAt: new Date().toISOString() });
+            currentUser = { username, name, role: 'user' };
+            currentViewOwner = username;
+            saveState();
+            signupForm.reset();
+            enterApp();
+        });
+
+        function enterApp() {
+            authScreen.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            mainApp.classList.add('visible');
+            loginForm.reset(); signupForm.reset();
+            hideAuthError('login'); hideAuthError('signup');
+            userNameEl.textContent = currentUser.name;
+            userRoleEl.textContent = currentUser.role === 'admin' ? 'Administrator' : 'User';
+            userAvatarEl.textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
+            inputDate.value = todayISO();
+            actInputDate.value = todayISO();
+            activityTabBtn.classList.toggle('hidden', currentUser.role !== 'admin');
+            if (currentUser.role !== 'admin') activeSection = 'budget';
+            switchSection(activeSection);
+            updateAdminControls();
+            renderTable();
+            renderActivityTable();
+        }
+
+        logoutBtn.addEventListener('click', () => {
+            currentUser = null; currentViewOwner = null;
+            saveState();
+            mainApp.classList.add('hidden'); mainApp.classList.remove('visible');
+            authScreen.classList.remove('hidden');
+            loginUsername.value = ''; loginPassword.value = ''; signupForm.reset();
+            authTab = 'login'; authRole = 'user'; activeSection = 'budget';
+            document.querySelectorAll('.auth-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'login'));
+            document.querySelectorAll('.role-btn').forEach(b => b.classList.toggle('active', b.dataset.role === 'user'));
+            document.querySelectorAll('.section-tab').forEach(b => b.classList.toggle('active', b.dataset.section === 'budget'));
+            loginPanel.classList.remove('hidden'); signupPanel.classList.add('hidden');
+            $('loginUsernameLabel').textContent = 'Username';
+            $('loginHint').innerHTML = 'Demo user: <code>user</code> / <code>user123</code> · or create your own account above';
+        });
+
+        // ============ SECTION SWITCHING ============
+        document.querySelectorAll('.section-tab').forEach(btn => {
+            btn.addEventListener('click', () => switchSection(btn.dataset.section));
+        });
+        function switchSection(section) {
+            if (section === 'activity' && (!currentUser || currentUser.role !== 'admin')) section = 'budget';
+            activeSection = section;
+            document.querySelectorAll('.section-tab').forEach(b => b.classList.toggle('active', b.dataset.section === section));
+            budgetSection.classList.toggle('hidden', section !== 'budget');
+            activitySection.classList.toggle('hidden', section !== 'activity');
+            if (section === 'budget') renderTable();
+            else renderActivityTable();
+        }
+
+        // ============ BUDGET PERMISSIONS ============
+        function canCurrentUserEdit() {
+            if (!currentUser) return false;
+            if (currentUser.role === 'user') return true;
+            return currentViewOwner === ADMIN_OWNER;
+        }
+        function updateAdminControls() {
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            adminViewGroup.classList.toggle('hidden', !isAdmin);
+            if (isAdmin) populateAdminViewDropdown();
+            const canEdit = canCurrentUserEdit();
+            addForm.classList.toggle('hidden', !canEdit);
+            importJsonBtn.classList.toggle('hidden', !canEdit);
+            updateViewNote();
+        }
+        function populateAdminViewDropdown() {
+            const prev = currentViewOwner;
+            adminViewUser.innerHTML = '';
+            const optAdmin = document.createElement('option');
+            optAdmin.value = ADMIN_OWNER;
+            optAdmin.textContent = 'Admin (my entries)';
+            adminViewUser.appendChild(optAdmin);
+            const optAll = document.createElement('option');
+            optAll.value = VIEW_ALL;
+            optAll.textContent = 'All Users (read-only)';
+            adminViewUser.appendChild(optAll);
+            users.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.username;
+                opt.textContent = `${u.name} (${u.username})`;
+                adminViewUser.appendChild(opt);
+            });
+            adminViewUser.value = prev || ADMIN_OWNER;
+            if (!adminViewUser.value) { adminViewUser.value = ADMIN_OWNER; currentViewOwner = ADMIN_OWNER; }
+        }
+        function updateViewNote() {
+            viewNote.classList.add('hidden');
+            if (!currentUser || currentUser.role !== 'admin') return;
+            if (currentViewOwner === ADMIN_OWNER) return;
+            viewNote.classList.remove('hidden');
+            viewNote.className = 'view-note read-only';
+            if (currentViewOwner === VIEW_ALL) {
+                viewNote.innerHTML = '<i class="fas fa-eye"></i> <span>Viewing <strong>all users\' entries</strong> (read-only). Exports and filters are available, but entries cannot be edited. Switch to <em>Admin (my entries)</em> to manage your own records.</span>';
+            } else {
+                const name = getUserDisplayName(currentViewOwner);
+                viewNote.innerHTML = `<i class="fas fa-eye"></i> <span>Viewing <strong>${escapeHtml(name)}</strong>'s entries (read-only). You can filter and export, but only this user can edit their own entries.</span>`;
+            }
+        }
+        adminViewUser.addEventListener('change', () => {
+            currentViewOwner = adminViewUser.value;
+            updateAdminControls();
+            renderTable();
+        });
+
+        // ============ BUDGET QUERIES ============
+        function getBaseRecords() {
+            if (!currentUser) return [];
+            if (currentUser.role === 'admin') {
+                if (currentViewOwner === VIEW_ALL) return records.slice();
+                return records.filter(r => r.owner === currentViewOwner);
+            }
+            return records.filter(r => r.owner === currentUser.username);
+        }
+        function getFilteredRecords() {
+            const base = getBaseRecords();
+            const cat = filterCategory.value;
+            const type = filterType.value;
+            const search = filterSearch.value.trim().toLowerCase();
+            const paidToSearch = filterPaidTo.value.trim().toLowerCase();
+            const fromDate = filterDateFrom.value;
+            const toDate = filterDateTo.value;
+            const minAmt = filterMinAmount.value !== '' ? parseFloat(filterMinAmount.value) : null;
+            const maxAmt = filterMaxAmount.value !== '' ? parseFloat(filterMaxAmount.value) : null;
+            return base.filter(r => {
+                if (cat !== 'all' && r.category !== cat) return false;
+                if (type !== 'all' && r.type !== type) return false;
+                if (search && !r.description.toLowerCase().includes(search)) return false;
+                const recPaidTo = (r.paidTo || '').toLowerCase();
+                if (paidToSearch && !recPaidTo.includes(paidToSearch)) return false;
+                if (fromDate && r.date < fromDate) return false;
+                if (toDate && r.date > toDate) return false;
+                if (minAmt !== null && !isNaN(minAmt) && r.amount < minAmt) return false;
+                if (maxAmt !== null && !isNaN(maxAmt) && r.amount > maxAmt) return false;
+                return true;
+            });
+        }
+
+        // ============ BUDGET RENDER ============
+        function renderTable() {
+            const filtered = getFilteredRecords();
+            const showUserCol = currentUser && currentUser.role === 'admin' && currentViewOwner === VIEW_ALL;
+            const canEdit = canCurrentUserEdit();
+            recordsTable.classList.toggle('show-user-col', showUserCol);
+            tbody.innerHTML = '';
+            filteredCountEl.textContent = filtered.length;
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                recordsTable.classList.add('hidden');
+                updateSummary(filtered);
+                return;
+            }
+            emptyState.classList.add('hidden');
+            recordsTable.classList.remove('hidden');
+            const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+            sorted.forEach((r, index) => {
+                const serial = index + 1;
+                const amountClass = r.type === 'budget' ? 'positive' : 'negative';
+                const amountSign = r.type === 'budget' ? '' : '-';
+                const ownerName = getUserDisplayName(r.owner);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="badge serial">#${serial}</span></td>
+                    <td class="user-col"><span class="badge user-badge">${escapeHtml(ownerName)}</span></td>
+                    <td>${formatDate(r.date)}</td>
+                    <td>${escapeHtml(r.category)}</td>
+                    <td>${escapeHtml(r.description)}</td>
+                    <td>${escapeHtml(r.paidTo || '—')}</td>
+                    <td><span class="badge ${r.type === 'budget' ? 'type-budget' : 'type-expense'}">${r.type}</span></td>
+                    <td class="amount ${amountClass}">${amountSign}${formatCurrency(r.amount)}</td>
+                    <td class="row-actions">
+                        ${canEdit ? `<button class="icon-btn delete" data-id="${r.id}" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="read-only-dash" title="Read-only">—</span>`}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (canEdit) {
+                document.querySelectorAll('.icon-btn.delete').forEach(btn => {
+                    btn.addEventListener('click', () => deleteRecord(Number(btn.dataset.id)));
+                });
+            }
+            updateSummary(filtered);
+        }
+        function updateSummary(filteredRecords) {
+            let totalBudget = 0, totalExpense = 0;
+            filteredRecords.forEach(r => {
+                if (r.type === 'budget') totalBudget += r.amount;
+                else totalExpense += r.amount;
+            });
+            const remaining = totalBudget - totalExpense;
+            totalBudgetEl.textContent = formatCurrency(totalBudget);
+            totalExpenseEl.textContent = formatCurrency(totalExpense);
+            remainingEl.textContent = formatCurrency(remaining);
+            remainingEl.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text)';
+            filteredCountEl.textContent = filteredRecords.length;
+        }
+
+        // ============ BUDGET CRUD ============
+        function addRecord() {
+            if (!canCurrentUserEdit()) { alert('You do not have permission to add records here.'); return; }
+            const category = inputCategory.value;
+            const description = inputDesc.value.trim();
+            const paidTo = inputPaidTo.value.trim();
+            const amount = parseFloat(inputAmount.value);
+            const type = inputType.value;
+            const date = inputDate.value;
+            if (!description) { alert('Please enter a description.'); return; }
+            if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount greater than 0.'); return; }
+            if (!date) { alert('Please select a date.'); return; }
+            records.push({ id: nextId++, owner: currentViewOwner, date, category, description, paidTo, amount, type });
+            saveState();
+            renderTable();
+            inputDesc.value = ''; inputPaidTo.value = ''; inputAmount.value = '';
+            inputDesc.focus();
+        }
+        function deleteRecord(id) {
+            if (!canCurrentUserEdit()) return;
+            const rec = records.find(r => r.id === id);
+            if (!rec) return;
+            if (rec.owner !== currentViewOwner) { alert('You can only delete your own records.'); return; }
+            if (!confirm('Delete this record?')) return;
+            records = records.filter(r => r.id !== id);
+            saveState();
+            renderTable();
+        }
+        addRecordBtn.addEventListener('click', addRecord);
+        inputAmount.addEventListener('keypress', e => { if (e.key === 'Enter') addRecord(); });
+        inputPaidTo.addEventListener('keypress', e => { if (e.key === 'Enter') addRecord(); });
+
+        [filterCategory, filterType, filterSearch, filterPaidTo, filterDateFrom, filterDateTo, filterMinAmount, filterMaxAmount]
+            .forEach(el => { el.addEventListener('input', renderTable); el.addEventListener('change', renderTable); });
+        clearFiltersBtn.addEventListener('click', () => {
+            filterCategory.value = 'all'; filterType.value = 'all';
+            filterSearch.value = ''; filterPaidTo.value = '';
+            filterDateFrom.value = ''; filterDateTo.value = '';
+            filterMinAmount.value = ''; filterMaxAmount.value = '';
+            renderTable();
+        });
+
+        // ============ BUDGET CSV EXPORT ============
+        function exportCSV() {
+            const filtered = getFilteredRecords();
+            if (filtered.length === 0) { alert('No records to export.'); return; }
+            const showUserCol = currentUser && currentUser.role === 'admin' && currentViewOwner === VIEW_ALL;
+            const sorted = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const headers = ['S.No'];
+            if (showUserCol) headers.push('User');
+            headers.push('Date', 'Category', 'Description', 'Paid To', 'Type', 'Amount (INR)');
+            const rows = sorted.map((r, idx) => {
+                const row = [idx + 1];
+                if (showUserCol) row.push(getUserDisplayName(r.owner));
+                row.push(r.date, r.category, r.description, r.paidTo || '', r.type, r.amount.toFixed(2));
+                return row;
+            });
+            const csvEscape = (val) => {
+                const s = String(val ?? '');
+                return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+            const csv = [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\r\n');
+            downloadBlob(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }), `renovation_budget_${currentViewOwner}_${todayISO()}.csv`);
+        }
+        exportCsvBtn.addEventListener('click', exportCSV);
+
+        // ============ BUDGET JSON EXPORT / IMPORT ============
+        function exportJSON() {
+            const base = getBaseRecords();
+            const data = {
+                version: 4,
+                exportedAt: new Date().toISOString(),
+                owner: currentViewOwner,
+                includeOwnerField: currentViewOwner === VIEW_ALL,
+                records: base
+            };
+            downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `renovation_budget_${currentViewOwner}_${todayISO()}.json`);
+        }
+        exportJsonBtn.addEventListener('click', exportJSON);
+
+        // Accepts {records:[...]}, {data:[...]}, or a plain array.
+        function extractRecordsArray(data) {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.records)) return data.records;
+            if (data && Array.isArray(data.data)) return data.data;
+            if (data && Array.isArray(data.items)) return data.items;
+            return null;
+        }
+
+        function importJSON(file) {
+            if (!canCurrentUserEdit()) { alert('You do not have permission to import records here.'); return; }
+            readJSONFile(file, (data) => {
+                const list = extractRecordsArray(data);
+                if (!list) {
+                    let hint = '';
+                    if (data && Array.isArray(data.activities)) {
+                        hint = ' This file contains activity entries — import it from the "Daily Activity Log" section instead.';
+                    }
+                    alert('Could not find a records array in this JSON file.' + hint);
+                    return;
+                }
+                if (list.length === 0) { alert('The file contains an empty records array. Nothing to import.'); return; }
+                let imported = 0, skipped = 0;
+                list.forEach(r => {
+                    if (!r || typeof r !== 'object') { skipped++; return; }
+                    const amt = parseFloat(r.amount);
+                    records.push({
+                        id: nextId++,
+                        owner: currentViewOwner,
+                        date: r.date || todayISO(),
+                        category: r.category || 'Other',
+                        description: r.description || r.desc || '',
+                        paidTo: r.paidTo || r.paid_to || r.vendor || '',
+                        amount: isNaN(amt) ? 0 : amt,
+                        type: r.type === 'budget' ? 'budget' : 'expense'
+                    });
+                    imported++;
+                });
+                saveState();
+                renderTable();
+                alert(`Imported ${imported} record(s) successfully.` + (skipped ? ` Skipped ${skipped} invalid entr${skipped === 1 ? 'y' : 'ies'}.` : ''));
+            }, (err) => {
+                console.error('Import error:', err);
+                alert('Error importing JSON: ' + err.message);
+            });
+        }
+
+        importJsonBtn.addEventListener('click', () => {
+            if (!canCurrentUserEdit()) { alert('You do not have permission to import records here.'); return; }
+            pickJSONFile(importJSON);
+        });
+
+        // ============ BUDGET PDF EXPORT ============
+        function exportPDF() {
+            const filtered = getFilteredRecords();
+            if (filtered.length === 0) { alert('No records to export.'); return; }
+            const showUserCol = currentUser && currentUser.role === 'admin' && currentViewOwner === VIEW_ALL;
+            const sorted = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            doc.setFillColor(139, 94, 60);
+            doc.rect(0, 0, 297, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Renovation Budget Audit', 20, 24);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            const scopeLabel = currentViewOwner === VIEW_ALL ? 'All Users' : getUserDisplayName(currentViewOwner);
+            doc.text(`Scope: ${scopeLabel} · Generated: ${new Date().toLocaleString()} · By: ${currentUser ? currentUser.name : ''}`, 20, 34);
+            let totalBudget = 0, totalExpense = 0;
+            filtered.forEach(r => { if (r.type === 'budget') totalBudget += r.amount; else totalExpense += r.amount; });
+            const remaining = totalBudget - totalExpense;
+            doc.setTextColor(50, 50, 50);
+            doc.setFontSize(10);
+            doc.text(`Total Budget: ${formatCurrency(totalBudget)}`, 20, 52);
+            doc.text(`Total Expenses: ${formatCurrency(totalExpense)}`, 85, 52);
+            doc.text(`Remaining: ${formatCurrency(remaining)}`, 155, 52);
+            const head = showUserCol
+                ? [['#', 'User', 'Date', 'Category', 'Description', 'Paid To', 'Type', 'Amount']]
+                : [['#', 'Date', 'Category', 'Description', 'Paid To', 'Type', 'Amount']];
+            const body = sorted.map((r, idx) => {
+                const row = [(idx + 1).toString()];
+                if (showUserCol) row.push(getUserDisplayName(r.owner));
+                row.push(formatDate(r.date), r.category, r.description, r.paidTo || '—',
+                    r.type === 'budget' ? 'Budget' : 'Expense',
+                    (r.type === 'budget' ? '' : '-') + formatCurrency(r.amount));
+                return row;
+            });
+            doc.autoTable({
+                startY: 62, head, body, theme: 'striped',
+                headStyles: { fillColor: [139, 94, 60], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [250, 247, 242] },
+                columnStyles: showUserCol
+                    ? { 0: { cellWidth: 10, halign: 'center' }, 7: { halign: 'right' } }
+                    : { 0: { cellWidth: 10, halign: 'center' }, 6: { halign: 'right' } },
+                styles: { fontSize: 8, cellPadding: 3.5, font: 'helvetica' },
+                margin: { left: 15, right: 15 }
+            });
+            doc.save(`renovation_budget_audit_${currentViewOwner}_${todayISO()}.pdf`);
+        }
+        exportPdfBtn.addEventListener('click', exportPDF);
+
+        // ============ ACTIVITY FILTERING ============
+        function getFilteredActivities() {
+            const type = filterActivityType.value;
+            const search = filterActivitySearch.value.trim().toLowerCase();
+            const fromDate = filterActivityDateFrom.value;
+            const toDate = filterActivityDateTo.value;
+            const minLabour = filterActivityLabourMin.value !== '' ? parseFloat(filterActivityLabourMin.value) : null;
+            const maxLabour = filterActivityLabourMax.value !== '' ? parseFloat(filterActivityLabourMax.value) : null;
+            return activities.filter(a => {
+                if (type !== 'all' && a.activityType !== type) return false;
+                if (search) {
+                    const sup = (a.supervisor || '').toLowerCase();
+                    const notes = (a.notes || '').toLowerCase();
+                    if (!sup.includes(search) && !notes.includes(search)) return false;
+                }
+                if (fromDate && a.date < fromDate) return false;
+                if (toDate && a.date > toDate) return false;
+                if (minLabour !== null && !isNaN(minLabour) && a.labourCount < minLabour) return false;
+                if (maxLabour !== null && !isNaN(maxLabour) && a.labourCount > maxLabour) return false;
+                return true;
+            });
+        }
+
+        // ============ ACTIVITY RENDER ============
+        function renderActivityTable() {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            const filtered = getFilteredActivities();
+            activityTableBody.innerHTML = '';
+            actTotalEntries.textContent = filtered.length;
+            if (filtered.length === 0) {
+                activityEmptyState.classList.remove('hidden');
+                activityTable.classList.add('hidden');
+                updateActivitySummary(filtered);
+                return;
+            }
+            activityEmptyState.classList.add('hidden');
+            activityTable.classList.remove('hidden');
+            const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+            sorted.forEach((a, index) => {
+                const serial = index + 1;
+                const hours = numOrZero(a.hoursWorked);
+                const manHours = a.labourCount * hours;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="badge serial">#${serial}</span></td>
+                    <td>${formatDate(a.date)}</td>
+                    <td><span class="badge activity-type">${escapeHtml(a.activityType)}</span></td>
+                    <td><span class="badge labour-badge">${a.labourCount}</span></td>
+                    <td class="num-strong">${hours ? hours : '—'}</td>
+                    <td class="num-strong">${manHours ? manHours.toFixed(2) : '—'}</td>
+                    <td>${escapeHtml(a.supervisor || '—')}</td>
+                    <td>${escapeHtml(a.notes || '—')}</td>
+                    <td class="row-actions"><button class="icon-btn delete" data-id="${a.id}" title="Delete"><i class="fas fa-trash"></i></button></td>
+                `;
+                activityTableBody.appendChild(tr);
+            });
+            document.querySelectorAll('#activityTableBody .icon-btn.delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteActivity(Number(btn.dataset.id)));
+            });
+            updateActivitySummary(filtered);
+        }
+        function updateActivitySummary(filtered) {
+            let totalLabour = 0, totalManHours = 0;
+            filtered.forEach(a => {
+                totalLabour += a.labourCount || 0;
+                totalManHours += (a.labourCount || 0) * numOrZero(a.hoursWorked);
+            });
+            const avg = filtered.length ? (totalLabour / filtered.length) : 0;
+            actTotalEntries.textContent = filtered.length;
+            actTotalLabour.textContent = totalLabour;
+            actTotalManHours.textContent = totalManHours.toFixed(2);
+            actAvgLabour.textContent = avg.toFixed(2);
+        }
+
+        // ============ ACTIVITY CRUD ============
+        function addActivity() {
+            if (!currentUser || currentUser.role !== 'admin') { alert('Only admin can log daily activities.'); return; }
+            const date = actInputDate.value;
+            const activityType = actInputType.value;
+            const labourCount = parseInt(actInputLabour.value, 10);
+            const hoursWorked = actInputHours.value !== '' ? parseFloat(actInputHours.value) : 0;
+            const supervisor = actInputSupervisor.value.trim();
+            const notes = actInputNotes.value.trim();
+            if (!date) { alert('Please select a date.'); return; }
+            if (isNaN(labourCount) || labourCount < 0) { alert('Please enter a valid labour count (0 or more).'); return; }
+            if (isNaN(hoursWorked) || hoursWorked < 0) { alert('Please enter a valid hours value.'); return; }
+            activities.push({ id: nextActivityId++, date, activityType, labourCount, hoursWorked, supervisor, notes });
+            saveState();
+            renderActivityTable();
+            actInputLabour.value = ''; actInputHours.value = '';
+            actInputSupervisor.value = ''; actInputNotes.value = '';
+            actInputLabour.focus();
+        }
+        function deleteActivity(id) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            if (!confirm('Delete this activity entry?')) return;
+            activities = activities.filter(a => a.id !== id);
+            saveState();
+            renderActivityTable();
+        }
+        addActivityBtn.addEventListener('click', addActivity);
+        actInputNotes.addEventListener('keypress', e => { if (e.key === 'Enter') addActivity(); });
+
+        [filterActivityType, filterActivitySearch, filterActivityDateFrom, filterActivityDateTo, filterActivityLabourMin, filterActivityLabourMax]
+            .forEach(el => { el.addEventListener('input', renderActivityTable); el.addEventListener('change', renderActivityTable); });
+        clearActivityFiltersBtn.addEventListener('click', () => {
+            filterActivityType.value = 'all';
+            filterActivitySearch.value = '';
+            filterActivityDateFrom.value = ''; filterActivityDateTo.value = '';
+            filterActivityLabourMin.value = ''; filterActivityLabourMax.value = '';
+            renderActivityTable();
+        });
+
+        // ============ ACTIVITY CSV EXPORT ============
+        function exportActivityCSV() {
+            const filtered = getFilteredActivities();
+            if (filtered.length === 0) { alert('No activity entries to export.'); return; }
+            const sorted = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const headers = ['S.No', 'Date', 'Activity Type', 'Labours', 'Hours / Labour', 'Total Man-Hours', 'Supervisor', 'Notes'];
+            const rows = sorted.map((a, idx) => {
+                const hours = numOrZero(a.hoursWorked);
+                const manHours = (a.labourCount || 0) * hours;
+                return [idx + 1, a.date, a.activityType, a.labourCount, hours || '', manHours ? manHours.toFixed(2) : '', a.supervisor || '', a.notes || ''];
+            });
+            const csvEscape = (val) => {
+                const s = String(val ?? '');
+                return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+            const csv = [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\r\n');
+            downloadBlob(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }), `daily_activity_log_${todayISO()}.csv`);
+        }
+        exportActivityCsvBtn.addEventListener('click', exportActivityCSV);
+
+        // ============ ACTIVITY JSON EXPORT / IMPORT ============
+        function exportActivityJSON() {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            const data = { version: 1, exportedAt: new Date().toISOString(), activities };
+            downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `daily_activity_log_${todayISO()}.json`);
+        }
+        exportActivityJsonBtn.addEventListener('click', exportActivityJSON);
+
+        function extractActivitiesArray(data) {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.activities)) return data.activities;
+            if (data && Array.isArray(data.activity)) return data.activity;
+            if (data && Array.isArray(data.data)) return data.data;
+            if (data && Array.isArray(data.items)) return data.items;
+            return null;
+        }
+
+        function importActivityJSON(file) {
+            if (!currentUser || currentUser.role !== 'admin') { alert('Only admin can import activity data.'); return; }
+            readJSONFile(file, (data) => {
+                const list = extractActivitiesArray(data);
+                if (!list) {
+                    let hint = '';
+                    if (data && Array.isArray(data.records)) {
+                        hint = ' This looks like a budget records file — import it from the "Budget Records" section instead.';
+                    }
+                    alert('Could not find an activities array in this JSON file.' + hint);
+                    return;
+                }
+                if (list.length === 0) { alert('The file contains an empty activities array. Nothing to import.'); return; }
+                let imported = 0, skipped = 0;
+                list.forEach(a => {
+                    if (!a || typeof a !== 'object') { skipped++; return; }
+                    const labour = parseInt(a.labourCount, 10);
+                    const hours = parseFloat(a.hoursWorked);
+                    activities.push({
+                        id: nextActivityId++,
+                        date: a.date || todayISO(),
+                        activityType: a.activityType || a.type || 'Other',
+                        labourCount: isNaN(labour) ? 0 : labour,
+                        hoursWorked: isNaN(hours) ? 0 : hours,
+                        supervisor: a.supervisor || '',
+                        notes: a.notes || a.note || ''
+                    });
+                    imported++;
+                });
+                saveState();
+                renderActivityTable();
+                alert(`Imported ${imported} activity entr${imported === 1 ? 'y' : 'ies'} successfully.` + (skipped ? ` Skipped ${skipped} invalid entr${skipped === 1 ? 'y' : 'ies'}.` : ''));
+            }, (err) => {
+                console.error('Activity import error:', err);
+                alert('Error importing activities JSON: ' + err.message);
+            });
+        }
+
+        importActivityJsonBtn.addEventListener('click', () => {
+            if (!currentUser || currentUser.role !== 'admin') { alert('Only admin can import activity data.'); return; }
+            pickJSONFile(importActivityJSON);
+        });
+
+        // ============ ACTIVITY PDF EXPORT ============
+        function exportActivityPDF() {
+            const filtered = getFilteredActivities();
+            if (filtered.length === 0) { alert('No activity entries to export.'); return; }
+            const sorted = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            doc.setFillColor(139, 94, 60);
+            doc.rect(0, 0, 297, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Daily Activity Log', 20, 24);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Generated: ${new Date().toLocaleString()} · By: ${currentUser ? currentUser.name : ''}`, 20, 34);
+            let totalLabour = 0, totalManHours = 0;
+            filtered.forEach(a => {
+                totalLabour += a.labourCount || 0;
+                totalManHours += (a.labourCount || 0) * numOrZero(a.hoursWorked);
+            });
+            doc.setTextColor(50, 50, 50);
+            doc.setFontSize(10);
+            doc.text(`Entries: ${filtered.length}`, 20, 52);
+            doc.text(`Total Labour-Days: ${totalLabour}`, 80, 52);
+            doc.text(`Total Man-Hours: ${totalManHours.toFixed(2)}`, 160, 52);
+            const body = sorted.map((a, idx) => {
+                const hours = numOrZero(a.hoursWorked);
+                const manHours = (a.labourCount || 0) * hours;
+                return [(idx + 1).toString(), formatDate(a.date), a.activityType, String(a.labourCount),
+                    hours ? hours.toString() : '—', manHours ? manHours.toFixed(2) : '—',
+                    a.supervisor || '—', a.notes || '—'];
+            });
+            doc.autoTable({
+                startY: 62,
+                head: [['#', 'Date', 'Activity Type', 'Labours', 'Hrs/Labour', 'Man-Hours', 'Supervisor', 'Notes']],
+                body, theme: 'striped',
+                headStyles: { fillColor: [139, 94, 60], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [250, 247, 242] },
+                columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'right' } },
+                styles: { fontSize: 8, cellPadding: 3.5, font: 'helvetica' },
+                margin: { left: 15, right: 15 }
+            });
+            doc.save(`daily_activity_log_${todayISO()}.pdf`);
+        }
+        exportActivityPdfBtn.addEventListener('click', exportActivityPDF);
+
+        // ============ INIT ============
+        function init() {
+            loadState();
+            inputDate.value = todayISO();
+            actInputDate.value = todayISO();
+            if (currentUser) enterApp();
+            else { authScreen.classList.remove('hidden'); mainApp.classList.add('hidden'); }
+        }
+        init();
+    })();
+</script>
+</body>
+</html>
